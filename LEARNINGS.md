@@ -106,3 +106,104 @@ function applyDiscountIfEligible(payment: Payment) {
 ---
 
 ## Chapter 4: Make Type Codes Work
+
+1. **Rule: Never use `if` with `else`** - Never use `if` with `else`, unless checking against a data type we do not control. We should view `if-else`s as _hardcoded decisions_.
+
+- Standalone `if`s are _checks_, `if-else`s are _decisions_.
+
+- Early binding -> You decide upfront, in one place, what should happen (code smell). When the program is compiled, behaviors (like `if-else` decisions) are resolved and locked into the application; cannot be modified without recompiling.
+
+❌ Early Binding
+
+```typescript
+function handlePayment(method: string) {
+  if (method === "credit") {
+    payWithCredit();
+  } else if (method === "paypal") {
+    payWithPaypal();
+  }
+}
+```
+
+- Late binding -> The decision of what happens is deferred until runtime, and delegated to the object itself.
+
+✅ Late Binding
+
+```typescript
+interface PaymentMethod {
+  pay(): void;
+}
+
+class CreditCard implements PaymentMethod {
+  pay() {
+    payWithCredit();
+  }
+}
+
+class PayPal implements PaymentMethod {
+  pay() {
+    payWithPaypal();
+  }
+}
+
+function handlePayment(method: PaymentMethod) {
+  method.pay();
+}
+```
+
+- **Refactoring Pattern: Replace Type Code With Classes** - This pattern transforms an enum into an interfaces, and the enums' values become classes. The issue with enums/type codes is: logic is scattered, adding new value = edit many files, violates "open for extension, closed for modification". The process is:
+  1. Create Interface (temporary name)
+
+  ```typescript
+  interface SizeType {
+    isSmall(): boolean;
+    isMedium(): boolean;
+    isLarge(): boolean;
+  }
+  ```
+
+  2. Create Classes
+
+  ```typescript
+  class Small implements SizeType {
+    isSmall() {
+      return true;
+    }
+    isMedium() {
+      return false;
+    }
+    isLarge() {
+      return false;
+    }
+  }
+  ```
+
+  3. Break the Code (on purpose) -> Rename enum → force compiler errors
+
+  4. Replace Checks
+
+  ```typescript
+  // Before
+  if (size === "SMALL")
+
+  //After
+  if (size.isSmall())
+  ```
+
+  5. Replace Enum Usage
+
+  ```typescript
+  // Before
+  size = "SMALL";
+
+  // After
+  size = new Small();
+  ```
+
+  6. Rename Interface (final form)
+
+  ```typescript
+  interface Size {
+    getPrice(): number;
+  }
+  ```
