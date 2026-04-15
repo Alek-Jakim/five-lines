@@ -207,3 +207,151 @@ function handlePayment(method: PaymentMethod) {
     getPrice(): number;
   }
   ```
+
+- **Refactoring Pattern: Push Type Code Into Classes** - Natural continuation of _REPLACE TYPE CODE WITH CLASSES_, it moves functionality into classes. `if` statements are often eliminated, and functionality is moved closer to the data. Helps localize the invariants because functionality connected with a specific value is moved into the class corresponding to that value. The process is:
+
+1. Copy into Classes
+
+```typescript
+// Take the function
+function getAction(light: TrafficLight) { ... }
+
+//Paste it into each class (Red, Green etc.)
+class Red {
+  getAction() { ... }
+}
+```
+
+2. Declare in Interface - Now all classes must implement it
+
+```typescript
+interface TrafficLight {
+  getAction(): string;
+}
+```
+
+3. Simplify per Class (KEY STEP)
+
+```typescript
+/* A. Inline constants */
+//Before
+if (true) return "STOP";
+
+//After
+return "STOP";
+
+/* B. Remove irrelevant branches */
+if (false) { ... }
+```
+
+4. Replace Original Function (Or delete it entirely)
+
+```typescript
+// getAction can be removed
+function getAction(light: TrafficLight) {
+  return light.getAction();
+}
+
+// Only this remains
+light.getAction();
+```
+
+- **Refactoring Pattern: Inline Method** - removes methods that no longer add readability to our app.
+
+```typescript
+// Before
+function isEligible(age) {
+  return isAdult(age);
+}
+
+function isAdult(age) {
+  return age >= 18;
+}
+
+// After
+function isEligible(age) {
+  return age >= 18;
+}
+```
+
+- **Refactoring Pattern: Specialize Method** - We have a natural desire to generalize and reuse; this blurs responsibilities and our code gets called from a variety of places. Specialized methods are called from fewer places -> they become unused sooner -> we can remove them. The process is:
+  1. Duplicate the method you want to specialize.
+  2. Rename one of the methods to a new permanent name, remove (or replace) the param used as the basis of your specialization.
+  3. Correct the method accordingly to remove errors.
+  4. Switch old calls over to use the new ones.
+
+```typescript
+// Before
+function remove(tile: Tile) {
+  for (let y = 0; y < map.length; y++) {
+    for (let x = 0; x < map[y].length; x++) {
+      if (map[y][x] === tile) {
+        map[y][x] = new Air();
+      }
+    }
+  }
+}
+
+//After
+function removeLock1() {
+  for (let y = 0; y < map.length; y++) {
+    for (let x = 0; x < map[y].length; x++) {
+      if (map[y][x].isLock1()) {
+        map[y][x] = new Air();
+      }
+    }
+  }
+}
+
+function removeLock2() {
+  for (let y = 0; y < map.length; y++) {
+    for (let x = 0; x < map[y].length; x++) {
+      if (map[y][x].isLock2()) {
+        map[y][x] = new Air();
+      }
+    }
+  }
+}
+```
+
+2. **Rule: Never Use Switch** - Never use `switch` UNLESS you have no `default` (or no functionality in it) AND return in _every_ case.
+
+```typescript
+// Example of an exception to the rule above
+function transformTile(tile: RawTile): Tile {
+  switch (tile) {
+    case RawTile.AIR:
+      return new Air();
+    case RawTile.FLUX:
+      return new Flux();
+    case RawTile.UNBREAKABLE:
+      return new Unbreakable();
+    case RawTile.PLAYER:
+      return new Player();
+    case RawTile.STONE:
+      return new Stone();
+    case RawTile.FALLING_STONE:
+      return new FallingStone();
+    case RawTile.BOX:
+      return new Box();
+    case RawTile.FALLING_BOX:
+      return new FallingBox();
+    case RawTile.KEY1:
+      return new Key1();
+    case RawTile.LOCK1:
+      return new Lock1();
+    case RawTile.KEY2:
+      return new Key2();
+    case RawTile.LOCK2:
+      return new Lock2();
+    default:
+      return assertExhausted(tile);
+  }
+}
+```
+
+- Why is `switch` bad? Because:
+  - it hides missing cases: Compiler won’t warn you when you add a new value. Bug: new cases silently fall into default.
+  - Fall-through is dangerous: Missing `break` → code keeps running. This is addressed by returning in every case.
+
+- **Smell** - `switch` focuses on context (how to handle value X here). Focusing on context means moving invariants further from their data, thereby globalizing them.
